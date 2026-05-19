@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VoidGuard — AI Fraud Detection</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+
+<link rel="stylesheet" href="style.css"/>
+</head>
+
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 1L2 4v4c0 3.3 2.6 6.4 6 7 3.4-.6 6-3.7 6-7V4L8 1z" stroke="#007aff" stroke-width="1.2" fill="rgba(0,122,255,0.08)"/>
+        <path d="M5.5 8l1.5 1.5L10.5 6" stroke="#007aff" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    VOID<span class="logo-name">GUARD</span>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="ntab active" onclick="goto('dashboard',this)">Dashboard</button>
+    <button class="ntab" onclick="goto('detect',this)">Detect</button>
+    <button class="ntab" onclick="goto('logs',this)">Logs</button>
+    <button class="ntab" onclick="goto('analytics',this)">Analytics</button>
+    <button class="ntab" onclick="goto('about',this)">About</button>
+  </div>
+
+  <div class="nav-r">
+    <div class="live-pill">
+      <div class="ldot"></div>
+      <span class="ltext">SYSTEM LIVE</span>
+    </div>
+    <div class="db-status disconnected" id="db-indicator" onclick="goto('dashboard',document.querySelector('.ntab'))">● MongoDB</div>
+  </div>
+</nav>
+
+
+<div class="app">
+
+
+  <div class="sidebar">
+    <div class="sg">Core</div>
+
+    <div class="si active" onclick="goto('dashboard',null,this)">
+      <svg viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      Overview
+    </div>
+
+    <div class="si" onclick="goto('detect',null,this)">
+      <svg viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      Detect Fraud
+    </div>
+
+    <div class="si" onclick="goto('logs',null,this)">
+      <svg viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M5 6h6M5 8.5h6M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      Fraud Logs <span class="sbadge" id="sb-badge">—</span>
+    </div>
+
+    <div class="sg">Analysis</div>
+
+    <div class="si" onclick="goto('analytics',null,this)">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M2 12l3-4 3 2 3-5 3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Analytics
+    </div>
+
+    <div class="sg">Info</div>
+
+    <div class="si" onclick="goto('about',null,this)">
+      <svg viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M8 7v5M8 5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      About
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="mini-stat">
+        <div class="ms-label">Fraud Today</div>
+        <div class="ms-val" id="sb-fraud-val">—</div>
+        <div class="ms-sub" id="sb-fraud-sub">Loading…</div>
+      </div>
+      <div class="mini-stat2">
+        <div class="ms2-label">Accuracy</div>
+        <div class="ms2-val">97.3%</div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="main">
+
+    <div class="page active" id="page-dashboard">
+      <div class="ph">
+        <div>
+          <div class="ph-eyebrow">// system overview</div>
+          <div class="ph-title">Fraud Detection Dashboard</div>
+          <div class="ph-sub">Live data from MongoDB Atlas · XGBoost + Behavioral Analytics</div>
+        </div>
+        <div class="ph-actions">
+          <button class="burst-btn" onclick="openBurst()"><span class="bbico">⚡</span> BURST DETECT</button>
+          <button class="btn-p" onclick="loadDashboard()">↻ Refresh</button>
+          <button class="btn-g" id="seed-btn-nav" onclick="seedDB()">⚙ Seed DB</button>
+        </div>
+      </div>
+
+
+      <div class="sg4">
+        <div class="sc cc">
+          <div class="sc-label">Total Transactions</div>
+          <div class="sc-val c" id="d-total">—</div>
+          <div class="sc-sub" id="d-total-sub">Loading from MongoDB…</div>
+        </div>
+        <div class="sc cr">
+          <div class="sc-label">Fraud Detected</div>
+          <div class="sc-val r" id="d-fraud">—</div>
+          <div class="sc-sub dn" id="d-fraud-sub">Loading…</div>
+        </div>
+        <div class="sc" style="background:linear-gradient(145deg,rgba(52,199,89,0.14),rgba(52,199,89,0.06));border:1px solid rgba(52,199,89,0.18);box-shadow:0 4px 18px rgba(52,199,89,0.1),inset 0 1px 0 rgba(255,255,255,0.8);">
+          <div class="sc-label">Safe Transactions</div>
+          <div class="sc-val g" id="d-safe">—</div>
+          <div class="sc-sub up" id="d-safe-sub">Loading…</div>
+        </div>
+        <div class="sc cb">
+          <div class="sc-label">Avg Latency</div>
+          <div class="sc-val" style="color:var(--blue)" id="d-latency">—</div>
+          <div class="sc-sub up">SLA &lt;50ms</div>
+        </div>
+      </div>
+
+     
+      <div class="g2">
+        <div>
+         
+          <div class="panel">
+            <div class="phead">
+              <div class="ptitle">Recent Transactions <span class="livetag">LIVE</span></div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--ts);">MongoDB · fraud_db</div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>TXN ID</th><th>Amount</th><th>Location</th><th>Risk %</th><th>Status</th></tr>
+              </thead>
+              <tbody id="live-table">
+                <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--tm);">Loading from MongoDB…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+      
+          <div class="panel">
+            <div class="phead"><div class="ptitle">How It Works</div></div>
+            <div class="pbody" style="padding:10px 14px;">
+              <div class="how-steps">
+                <div class="how-step"><div class="how-ico">💳</div><div class="how-title">Payment</div><div class="how-desc">UPI / NEFT initiated</div></div>
+                <div class="how-step"><div class="how-ico">🗄</div><div class="how-title">MongoDB</div><div class="how-desc">Fetch sender profile</div></div>
+                <div class="how-step"><div class="how-ico">🌐</div><div class="how-title">Geo API</div><div class="how-desc">Haversine distance calc</div></div>
+                <div class="how-step"><div class="how-ico">🧠</div><div class="how-title">XGBoost</div><div class="how-desc">ML risk score</div></div>
+                <div class="how-step"><div class="how-ico">🛡</div><div class="how-title">Decision</div><div class="how-desc">Block / Flag / Allow</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      
+        <div class="gcol">
+          <div class="panel">
+            <div class="phead"><div class="ptitle">Model Performance</div></div>
+            <div class="pbody">
+              <div class="metric-row"><div class="metric-name">Detection Accuracy</div><div class="metric-track"><div class="metric-fill" style="width:97.3%;background:var(--teal)"></div></div><div class="metric-val" style="color:var(--blue)">97.3%</div></div>
+              <div class="metric-row"><div class="metric-name">Precision</div><div class="metric-track"><div class="metric-fill" style="width:96.1%;background:var(--teal)"></div></div><div class="metric-val" style="color:var(--blue)">96.1%</div></div>
+              <div class="metric-row"><div class="metric-name">Recall (KEY)</div><div class="metric-track"><div class="metric-fill" style="width:94.8%;background:var(--orange)"></div></div><div class="metric-val" style="color:var(--orange)">94.8%</div></div>
+              <div class="metric-row"><div class="metric-name">F1 Score</div><div class="metric-track"><div class="metric-fill" style="width:95.4%;background:var(--teal)"></div></div><div class="metric-val" style="color:var(--blue)">95.4%</div></div>
+              <div class="metric-row"><div class="metric-name">ROC-AUC</div><div class="metric-track"><div class="metric-fill" style="width:98%;background:var(--green)"></div></div><div class="metric-val" style="color:var(--green)">0.98</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="phead"><div class="ptitle">Top Risk Signals</div></div>
+            <div class="pbody">
+              <div class="risk-row"><div class="risk-label">Location anomaly</div><div class="risk-track"><div class="risk-fill" style="width:82%;background:var(--red)"></div></div><div class="risk-pct" style="color:var(--red)">82%</div></div>
+              <div class="risk-row"><div class="risk-label">Amount deviation</div><div class="risk-track"><div class="risk-fill" style="width:71%;background:var(--orange)"></div></div><div class="risk-pct" style="color:var(--orange)">71%</div></div>
+              <div class="risk-row"><div class="risk-label">Velocity (15 min)</div><div class="risk-track"><div class="risk-fill" style="width:58%;background:var(--orange)"></div></div><div class="risk-pct" style="color:var(--orange)">58%</div></div>
+              <div class="risk-row"><div class="risk-label">Unknown device</div><div class="risk-track"><div class="risk-fill" style="width:44%;background:var(--blue)"></div></div><div class="risk-pct" style="color:var(--blue)">44%</div></div>
+              <div class="risk-row"><div class="risk-label">Thin recipient</div><div class="risk-track"><div class="risk-fill" style="width:33%;background:var(--teal)"></div></div><div class="risk-pct" style="color:var(--blue)">33%</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="page" id="page-detect">
+      <div class="ph">
+        <div>
+          <div class="ph-eyebrow">// fraud detection engine</div>
+          <div class="ph-title">Check Transaction</div>
+          <div class="ph-sub">Live call to FastAPI → MongoDB → XGBoost · Result saved back to MongoDB</div>
+        </div>
+      </div>
+
+    
+      <div class="api-banner" style="display:none;">
+        <div style="font-size:23px;flex-shrink:0;">⚙</div>
+        <div style="flex:1;">
+          <div style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--orange);text-transform:uppercase;margin-bottom:4px;">ML API Endpoint</div>
+          <div class="api-url-row">
+            <input class="api-url-inp" id="api-url" type="text" value="http://localhost:8000" placeholder="http://your-server:8000"/>
+            <button class="api-save-btn" onclick="saveApi()">SAVE</button>
+          </div>
+          <div class="api-sl info" id="api-sl">// Set your FastAPI URL · run: uvicorn api_v2:app --host 0.0.0.0 --port 8000 --reload</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="phead">
+          <div class="ptitle">Select User <span style="font-size:13px;color:var(--ts);margin-left:4px;">← FROM MONGODB</span></div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--ts);">fraud_db.users</div>
+        </div>
+        <div class="pbody">
+          <div id="user-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+        </div>
+      </div>
+
+  
+      <div class="g2">
+        <div class="panel">
+          <div class="phead">
+            <div class="ptitle">Transaction Details</div>
+            <div style="font-family:var(--mono);font-size:13px;color:var(--ts);">POST /predict</div>
+          </div>
+          <div class="pbody">
+            <div class="form-grid">
+              <div class="fg"><label>Amount (₹)</label><input type="number" id="f-amount" placeholder="e.g. 50000" min="1"/></div>
+              <div class="fg"><label>Transaction Type</label>
+                <select id="f-type">
+                  <option value="UPI">UPI Transfer</option>
+                  <option value="NEFT">NEFT</option>
+                  <option value="CARD">Card Payment</option>
+                  <option value="WALLET">Wallet</option>
+                </select>
+              </div>
+              <div class="fg"><label>Current Location</label><input type="text" id="f-curr-loc" placeholder="e.g. Mumbai"/></div>
+              <div class="fg"><label>Transaction Hour (0–23)</label><input type="number" id="f-hour" min="0" max="23" placeholder="14"/></div>
+              <div class="fg"><label>Device</label>
+                <select id="f-device">
+                  <option value="known">Known Device ✓</option>
+                  <option value="unknown">Unknown Device ✗</option>
+                </select>
+              </div>
+              <div class="fg"><label>Txns in Last 15 Min</label><input type="number" id="f-v15" min="0" value="0"/></div>
+              <div class="fg full"><label>Recipient Account ← MongoDB</label>
+                <select id="f-recipient">
+                  <option value="SBI0001">SBI0001 — Vikram Singh (450 txns, normal)</option>
+                  <option value="SBI0002">SBI0002 — Mule Account (4 txns, suspicious)</option>
+                  <option value="HDFC001">HDFC001 — Meera Nair (1200 txns, active)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;padding:10px;background:var(--card);border:1px solid var(--b);border-radius:var(--r);">
+              <div style="font-family:var(--mono);font-size:13px;letter-spacing:2px;color:var(--ts);text-transform:uppercase;margin-bottom:5px;">Sender Profile (from MongoDB)</div>
+              <div id="sender-info" style="font-size:16px;color:var(--ts);">Select a user above to load profile</div>
+            </div>
+            <button class="detect-btn" id="detect-btn" onclick="runDetect()">▶ ANALYZE TRANSACTION</button>
+          </div>
+        </div>
+
+      
+        <div class="gcol">
+          <div class="panel">
+            <div class="phead">
+              <div class="ptitle">Analysis Result</div>
+              <div id="result-latency" style="font-family:var(--mono);font-size:14px;color:var(--ts);"></div>
+            </div>
+            <div class="pbody" id="result-area">
+              <div class="result-idle">
+                <div class="result-idle-icon">◎</div>
+                <div class="result-idle-text">AWAITING TRANSACTION</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="phead"><div class="ptitle">XAI — Risk Factors</div></div>
+            <div class="pbody" id="xai-area">
+              <div style="font-family:var(--mono);font-size:14px;color:var(--tm);letter-spacing:1px;">// Appears after analysis</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  
+    <div class="page" id="page-logs">
+      <div class="ph">
+        <div>
+          <div class="ph-eyebrow">// transaction history</div>
+          <div class="ph-title">Fraud Logs</div>
+          <div class="ph-sub">Live data from MongoDB · fraud_db.transactions · Auto-updates on new detections</div>
+        </div>
+        <div class="ph-actions">
+          <button class="btn-p" onclick="loadLogs()">↻ Refresh from DB</button>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <button class="flt-btn active" onclick="filterLog('all',this)">All</button>
+        <button class="flt-btn" onclick="filterLog('FRAUD',this)">Fraud</button>
+        <button class="flt-btn" onclick="filterLog('REVIEW',this)">Review</button>
+        <button class="flt-btn" onclick="filterLog('SAFE',this)">Safe</button>
+      </div>
+
+      <div class="panel">
+        <div class="phead">
+          <div class="ptitle">Transactions <span class="livetag" id="log-count-tag">—</span></div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--ts);">MongoDB Atlas · fraud_db.transactions</div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>TXN ID</th><th>Time</th><th>Amount</th><th>User</th><th>Usual Loc</th><th>Curr Loc</th><th>Dist km</th><th>Risk %</th><th>Status</th><th>Flag Reason</th></tr>
+          </thead>
+          <tbody id="log-table">
+            <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--tm);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+   
+    <div class="page" id="page-analytics">
+      <div class="ph">
+        <div>
+          <div class="ph-eyebrow">// data analytics</div>
+          <div class="ph-title">Analytics &amp; Insights</div>
+          <div class="ph-sub">Computed from MongoDB · 500 test transactions · User_001 profile</div>
+        </div>
+        <div class="ph-actions">
+          <button class="btn-p" onclick="loadAnalytics()">↻ Refresh Charts</button>
+        </div>
+      </div>
+
+   
+      <div class="sg4" style="margin-bottom:16px;">
+        <div class="sc cc"><div class="sc-label">Total in DB</div><div class="sc-val c" id="an-total">—</div><div class="sc-sub">All transactions</div></div>
+        <div class="sc cr"><div class="sc-label">Fraud in DB</div><div class="sc-val r" id="an-fraud">—</div><div class="sc-sub dn">Fraud count</div></div>
+        <div class="sc ca"><div class="sc-label">Safe in DB</div><div class="sc-val a" id="an-safe">—</div><div class="sc-sub">Legitimate</div></div>
+        <div class="sc cb"><div class="sc-label">Avg Latency</div><div class="sc-val" style="color:var(--blue)" id="an-latency">—</div><div class="sc-sub up">ms</div></div>
+      </div>
+
+      
+      <div class="g2">
+        <div class="panel"><div class="phead"><div class="ptitle">Daily Fraud Trend</div></div><div class="pbody"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div></div>
+        <div class="panel"><div class="phead"><div class="ptitle">Fraud Type Distribution</div></div><div class="pbody"><div class="chart-wrap"><canvas id="typeChart"></canvas></div></div></div>
+      </div>
+
+     
+      <div class="g2">
+        <div class="panel"><div class="phead"><div class="ptitle">Amount vs Risk Score</div></div><div class="pbody"><div class="chart-wrap"><canvas id="scatterChart"></canvas></div></div></div>
+        <div class="panel"><div class="phead"><div class="ptitle">Hourly Fraud Pattern</div></div><div class="pbody"><div class="chart-wrap"><canvas id="hourChart"></canvas></div></div></div>
+      </div>
+    </div>
+
+
+  
+    <div class="page" id="page-about">
+      <div class="ph">
+        <div>
+          <div class="ph-eyebrow">// TechManthan 2026</div>
+          <div class="ph-title">About VoidGuard</div>
+          <div class="ph-sub">Geetanjali Institute of Technical Studies · Team VOID</div>
+        </div>
+      </div>
+
+      <div class="about-stat-grid">
+        <div class="about-sc"><div class="about-sc-val" style="color:var(--blue)">&gt;97%</div><div class="about-sc-label">Detection Accuracy</div></div>
+        <div class="about-sc"><div class="about-sc-val" style="color:var(--orange)">&lt;50ms</div><div class="about-sc-label">Processing Latency</div></div>
+        <div class="about-sc"><div class="about-sc-val" style="color:var(--green)">-40%</div><div class="about-sc-label">False Positives Reduced</div></div>
+      </div>
+
+      <div class="g2" style="margin-bottom:14px;">
+        <div class="panel">
+          <div class="phead"><div class="ptitle">Problem Statement</div></div>
+          <div class="pbody">
+            <p style="font-size:17px;color:var(--ts);line-height:1.7;margin-bottom:10px;">Lack of real-time <span style="color:var(--blue)">explainable fraud detection</span> in digital payment systems — making it impossible to identify and trust suspicious transactions at scale.</p>
+            <div style="background:var(--rdim);border:1px solid rgba(255,51,85,.15);border-radius:var(--r);padding:12px;">
+              <div style="font-family:var(--mono);font-size:13px;letter-spacing:2px;color:var(--red);margin-bottom:5px;">GAPS IN CURRENT SYSTEMS</div>
+              <div style="font-size:16px;color:var(--ts);line-height:1.9;">→ No real-time response (&gt;500ms)<br/>→ Black box — no explainability<br/>→ Static rules, poor adaptability<br/>→ High false positive rates (10–30%)<br/>→ <span style="color:var(--red);font-family:var(--mono);">$10.5T</span> cybercrime cost by 2026</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="phead"><div class="ptitle">Technology Stack</div></div>
+          <div class="pbody">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div><div class="section-label">ML / AI</div><div class="tag-row"><span class="tag">XGBoost</span><span class="tag">Random Forest</span><span class="tag">Scikit-Learn</span><span class="tag">SMOTE</span></div></div>
+              <div><div class="section-label">Backend</div><div class="tag-row"><span class="tag">FastAPI</span><span class="tag">Python 3.11</span><span class="tag">Uvicorn</span><span class="tag">Pydantic</span></div></div>
+              <div><div class="section-label">Database</div><div class="tag-row"><span class="tag">MongoDB Atlas</span><span class="tag">PyMongo</span><span class="tag">Pandas</span><span class="tag">NumPy</span></div></div>
+              <div><div class="section-label">Geo</div><div class="tag-row"><span class="tag">OpenCage API</span><span class="tag">Haversine</span><span class="tag">geo_lookup.py</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="phead"><div class="ptitle">Innovation &amp; Uniqueness</div></div>
+        <div class="pbody">
+          <div class="inno-grid">
+            <div class="inno-card"><div class="inno-title" style="color:var(--blue)">Graph Neural Networks</div><div class="inno-desc">Analyzes connections between users, devices and transactions to detect hidden fraud rings.</div></div>
+            <div class="inno-card"><div class="inno-title" style="color:var(--blue)">Edge-Based Risk Scoring</div><div class="inno-desc">Near-instant analysis under 50ms. No batch delay — transaction evaluated in real-time.</div></div>
+            <div class="inno-card"><div class="inno-title" style="color:var(--orange)">Continuous Learning</div><div class="inno-desc">Model updates from new fraud patterns — adapts to evolving attack vectors automatically.</div></div>
+            <div class="inno-card"><div class="inno-title" style="color:var(--orange)">Explainable AI (XAI)</div><div class="inno-desc">Every flagged transaction shows clear reasons — satisfies RBI explainability requirements.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><div class="ptitle">Project Team — VOID</div></div>
+        <div class="pbody">
+          <div class="team-grid">
+            <div class="team-card"><div class="team-av">AK</div><div class="team-name">Arun Kumar Yadav</div><div class="team-role">Research &amp; Design</div><div class="tag-row"><span class="tag">Research</span><span class="tag">Docs</span></div></div>
+            <div class="team-card"><div class="team-av">YS</div><div class="team-name">Yuvraj Singh Chundawat</div><div class="team-role">AI / ML Engineer</div><div class="tag-row"><span class="tag">XGBoost</span><span class="tag">Python</span><span class="tag">ML</span></div></div>
+            <div class="team-card"><div class="team-av">LD</div><div class="team-name">Lavish Dadhich</div><div class="team-role">Web Developer</div><div class="tag-row"><span class="tag">UI/UX</span><span class="tag">FastAPI</span><span class="tag">React.js</span><span class="tag">MongoDB</span></div></div>
+          </div>
+          <div style="text-align:center;margin-top:14px;font-family:var(--mono);font-size:14px;color:var(--tm);letter-spacing:2px;">GEETANJALI INSTITUTE OF TECHNICAL STUDIES — TECHMANTHAN 2026</div>
+        </div>
+      </div>
+    </div>
+
+
+  
+    <div id="burst-overlay" style="display:none;" class="burst-overlay">
+      <div class="burst-header">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="burst-title">
+            <span>⚡</span> BURST FRAUD DETECTION
+            <span id="burst-running-tag" style="display:none;font-size:14px;background:var(--adim);color:var(--orange);border:1px solid rgba(255,184,0,.2);padding:2px 8px;border-radius:2px;letter-spacing:1px;animation:blink 1s infinite;">RUNNING</span>
+          </div>
+          <div class="burst-title-sub" id="burst-subtitle">Rapid batch scoring — simulates real fraud + legit transactions</div>
+        </div>
+        <button class="burst-close" onclick="closeBurst()">✕ BACK</button>
+      </div>
+
+
+      <div id="burst-landing" style="flex:1;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;max-width:480px;padding:24px;">
+          <div style="font-size:61px;margin-bottom:16px;filter:drop-shadow(0 0 24px rgba(255,184,0,.4));">⚡</div>
+          <div style="font-family:var(--mono);font-size:23px;color:var(--orange);letter-spacing:3px;margin-bottom:8px;">BURST MODE</div>
+          <div style="font-size:18px;color:var(--ts);line-height:1.7;margin-bottom:28px;">
+            Rapidly fires multiple transactions through the <span style="color:var(--blue)">XGBoost model</span>,
+            mixing real fraud patterns and legitimate payments — then shows a live dashboard with accuracy, recall, and misclassifications.
+          </div>
+          <div style="margin-bottom:28px;">
+            <div style="font-family:var(--mono);font-size:14px;letter-spacing:2.5px;color:var(--ts);text-transform:uppercase;margin-bottom:12px;">Select Transaction Count</div>
+            <div style="display:flex;gap:10px;justify-content:center;" id="burst-count-pills">
+              <button class="burst-count-pill" onclick="selectBurstCount(10,this)">10</button>
+              <button class="burst-count-pill active" onclick="selectBurstCount(20,this)">20</button>
+              <button class="burst-count-pill" onclick="selectBurstCount(30,this)">30</button>
+              <button class="burst-count-pill" onclick="selectBurstCount(50,this)">50</button>
+            </div>
+            <div style="font-family:var(--mono);font-size:14px;color:var(--ts);margin-top:10px;letter-spacing:1px;">
+              ~35% fraud · ~65% legit · <span style="color:var(--orange)" id="burst-count-hint">7 fraud + 13 legit</span>
+            </div>
+          </div>
+          <input type="hidden" id="burst-count" value="20"/>
+          <button class="burst-run-main-btn" id="burst-run-btn" onclick="runBurst()">
+            <span style="font-size:21px;">▶</span> RUN BURST DETECTION
+          </button>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap;">
+            <span style="font-family:var(--mono);font-size:13px;padding:3px 10px;background:var(--cdim);color:var(--blue);border:1px solid rgba(0,245,212,.15);border-radius:2px;letter-spacing:1px;">XGBoost Model</span>
+            <span style="font-family:var(--mono);font-size:13px;padding:3px 10px;background:var(--adim);color:var(--orange);border:1px solid rgba(255,184,0,.15);border-radius:2px;letter-spacing:1px;">Haversine Geo</span>
+            <span style="font-family:var(--mono);font-size:13px;padding:3px 10px;background:var(--gdim);color:var(--green);border:1px solid rgba(0,230,118,.15);border-radius:2px;letter-spacing:1px;">Real-time Scoring</span>
+            <span style="font-family:var(--mono);font-size:13px;padding:3px 10px;background:var(--rdim);color:var(--red);border:1px solid rgba(255,51,85,.15);border-radius:2px;letter-spacing:1px;">5 Fraud Patterns</span>
+          </div>
+        </div>
+      </div>
+
+  
+      <div id="burst-results-screen" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+        <div style="background:rgba(6,12,24,.97);border-bottom:1px solid var(--b);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+          <button onclick="resetBurst()" style="background:transparent;border:1px solid var(--b);color:var(--ts);font-family:var(--mono);font-size:14px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:var(--r);cursor:pointer;transition:all .18s;" onmouseover="this.style.borderColor='var(--teal)';this.style.color='var(--teal)'" onmouseout="this.style.borderColor='var(--b)';this.style.color='var(--ts)'">← NEW RUN</button>
+          <div style="font-family:var(--mono);font-size:15px;color:var(--ts);letter-spacing:1px;" id="burst-subtitle-results">Showing 20 transactions</div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <div id="burst-progress-wrap" style="display:none;min-width:200px;">
+              <div class="burst-progress-label">
+                <span>Processing…</span>
+                <span id="burst-progress-text">0 / 20</span>
+              </div>
+              <div class="burst-progress-track"><div class="burst-progress-fill" id="burst-progress-fill" style="width:0%;"></div></div>
+              <div class="burst-step-text" id="burst-step-text" style="margin-top:3px;font-size:14px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="burst-body" style="flex:1;">
+          <div class="burst-left" id="burst-content">
+            <div style="text-align:center;padding:48px 0;">
+              <div class="burst-spin" style="margin:0 auto;"></div>
+            </div>
+          </div>
+          <div class="burst-right">
+            <div class="burst-summary-title">Detection Summary</div>
+            <div id="burst-summary-content">
+              <div style="font-family:var(--mono);font-size:14px;color:var(--tm);letter-spacing:1px;padding:20px 0;text-align:center;">// Processing…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="toast" id="toast"></div>
+
+
+<div class="txn-modal-overlay" id="txn-detail-overlay" style="display:none;" onclick="closeTxnDetail(event)">
+  <div class="txn-modal" id="txn-detail-modal" onclick="event.stopPropagation()">
+    <button class="txn-mclose" onclick="closeTxnDetailDirect()">✕ CLOSE</button>
+    <div class="txn-mhdr" id="txn-mhdr">
+      <div class="txn-mhdr-icon" id="txn-mhdr-icon"></div>
+      <div>
+        <div class="txn-mhdr-title" id="txn-mhdr-title">Transaction Detail</div>
+        <div class="txn-mhdr-sub" id="txn-mhdr-sub"></div>
+      </div>
+      <div class="txn-mhdr-meta">
+        <div class="txn-mhdr-id" id="txn-mhdr-id"></div>
+        <div class="txn-mhdr-ts" id="txn-mhdr-ts"></div>
+      </div>
+    </div>
+    <div class="txn-risk-banner" id="txn-risk-banner">
+      <div>
+        <div class="txn-risk-label" id="txn-risk-label">Risk Score</div>
+        <div class="txn-risk-score" id="txn-risk-score">—</div>
+        <div class="txn-risk-conf" id="txn-risk-conf"></div>
+      </div>
+      <div class="txn-risk-bar-wrap">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ts);display:flex;justify-content:space-between;margin-bottom:4px;"><span>0% SAFE</span><span>50%</span><span>100% FRAUD</span></div>
+        <div class="txn-risk-bar-track"><div class="txn-risk-bar-fill" id="txn-risk-bar"></div></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ts);margin-top:6px;" id="txn-risk-thresh">Threshold: 50%</div>
+      </div>
+    </div>
+    <div class="txn-mbody">
+      <div class="txn-section">
+        <div class="txn-section-title" id="txn-sec1-title">Transaction Information</div>
+        <div class="txn-detail-grid three-col">
+          <div class="txn-df"><div class="txn-df-label">Amount</div><div class="txn-df-val mono" id="td-amount">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Status</div><div class="txn-df-val" id="td-status">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Transaction Hour</div><div class="txn-df-val mono" id="td-hour">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Device Match</div><div class="txn-df-val" id="td-device">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Txns Last 15 Min</div><div class="txn-df-val mono" id="td-v15">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Latency</div><div class="txn-df-val mono" id="td-latency">—</div></div>
+          <div class="txn-df full3"><div class="txn-df-label">Device ID</div><div class="txn-df-val mono" style="font-size:13px;" id="td-deviceid">—</div></div>
+        </div>
+      </div>
+      <div class="txn-section">
+        <div class="txn-section-title">📍 Location Analysis</div>
+        <div class="txn-loc-row" id="td-loc-row">
+          <div><div style="font-family:var(--mono);font-size:11px;color:var(--ts);margin-bottom:2px;">USUAL</div><div class="txn-loc-from" id="td-usual-loc">—</div></div>
+          <div class="txn-loc-arrow">→</div>
+          <div><div style="font-family:var(--mono);font-size:11px;color:var(--ts);margin-bottom:2px;">CURRENT</div><div class="txn-loc-to" id="td-curr-loc">—</div></div>
+          <div class="txn-loc-dist" id="td-dist">—</div>
+        </div>
+      </div>
+      <div class="txn-section">
+        <div class="txn-section-title">👤 Sender Profile</div>
+        <div class="txn-detail-grid">
+          <div class="txn-df"><div class="txn-df-label">User</div><div class="txn-df-val" id="td-username">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">User ID</div><div class="txn-df-val mono" id="td-userid">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Avg Transaction</div><div class="txn-df-val mono" id="td-avgamt">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Amount Deviation</div><div class="txn-df-val" id="td-amtdev">—</div></div>
+        </div>
+      </div>
+      <div class="txn-section">
+        <div class="txn-section-title">🏦 Recipient Info</div>
+        <div class="txn-detail-grid">
+          <div class="txn-df"><div class="txn-df-label">Avg Inflow</div><div class="txn-df-val mono" id="td-recip-avg">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Transaction History</div><div class="txn-df-val mono" id="td-recip-hist">—</div></div>
+        </div>
+      </div>
+      <div class="txn-section">
+        <div class="txn-section-title red-sec" id="txn-rf-title">⚠ Risk Factors</div>
+        <div class="txn-rf-list" id="td-risk-factors"></div>
+      </div>
+      <div class="txn-section">
+        <div class="txn-section-title">🎯 Model Confidence</div>
+        <div class="txn-detail-grid three-col">
+          <div class="txn-df"><div class="txn-df-label">Confidence</div><div class="txn-df-val" id="td-conf">—</div></div>
+          <div class="txn-df"><div class="txn-df-label">Threshold</div><div class="txn-df-val mono">50%</div></div>
+          <div class="txn-df"><div class="txn-df-label">Model</div><div class="txn-df-val mono" style="color:var(--blue);">XGBoost</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.sc').forEach(c => {
+    const g = document.createElement('div');
+    g.className = 'sc-gloss';
+    c.prepend(g);
+  });
+});
+</script>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
